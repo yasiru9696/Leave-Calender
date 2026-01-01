@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Sri Lanka Calendar</title>
+    <meta name="description"
+        content="Interactive 2026 Sri Lanka calendar with public holidays and note-taking functionality">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="side-panel.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">Sri Lanka Calendar 2026</h1>
+                <div class="year-badge">2026</div>
+            </div>
+            <div class="leave-tracker">
+                <div class="leave-card casual-leave">
+                    <div class="leave-icon">🏖️</div>
+                    <div class="leave-details">
+                        <div class="leave-type">Casual Leave</div>
+                        <div class="leave-stats">
+                            <span class="leave-used">Used: <strong id="casualUsed">0</strong></span>
+                            <span class="leave-remaining">Remaining: <strong id="casualRemaining">7</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="leave-card annual-leave">
+                    <div class="leave-icon">✈️</div>
+                    <div class="leave-details">
+                        <div class="leave-type">Annual Leave</div>
+                        <div class="leave-stats">
+                            <span class="leave-used">Used: <strong id="annualUsed">0</strong></span>
+                            <span class="leave-remaining">Remaining: <strong id="annualRemaining">14</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="calendar-wrapper">
+            <div class="calendar-controls">
+                <button id="prevMonth" class="nav-btn" aria-label="Previous month">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <h2 id="currentMonth" class="current-month"></h2>
+                <button id="nextMonth" class="nav-btn" aria-label="Next month">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="calendar-grid">
+                <div class="weekday-header">Mon</div>
+                <div class="weekday-header">Tue</div>
+                <div class="weekday-header">Wed</div>
+                <div class="weekday-header">Thu</div>
+                <div class="weekday-header">Fri</div>
+                <div class="weekday-header">Sat</div>
+                <div class="weekday-header">Sun</div>
+                <div id="calendarDays" class="calendar-days"></div>
+            </div>
+
+            <div class="holidays-section">
+                <h3 class="holidays-title">Public Holidays This Month</h3>
+                <div id="holidaysList" class="holidays-list"></div>
+            </div>
+        </div>
+
+        <!-- Side Panel Toggle Button -->
+        <button id="sidePanelToggle" class="side-panel-toggle" aria-label="Toggle year overview">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+            <span>Year Overview</span>
+        </button>
+
+        <!-- Side Panel -->
+        <div id="sidePanel" class="side-panel">
+            <div class="side-panel-header">
+                <h2 class="side-panel-title">2026 Overview</h2>
+                <button id="closeSidePanel" class="close-panel-btn" aria-label="Close panel">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="side-panel-content">
+                <!-- Combined Holidays and Leaves Section -->
+                <div class="panel-section">
+                    <h3 class="panel-section-title">
+                        <span class="section-icon">📅</span>
+                        2026 Calendar Overview
+                    </h3>
+                    <div class="leave-summary">
+                        <div class="summary-item casual">
+                            <span>Casual Leave:</span>
+                            <strong id="sideCasualCount">0</strong>
+                        </div>
+                        <div class="summary-item annual">
+                            <span>Annual Leave:</span>
+                            <strong id="sideAnnualCount">0</strong>
+                        </div>
+                    </div>
+                    <div id="combinedList" class="panel-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Modal -->
+    <div id="noteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle" class="modal-title"></h3>
+                <button id="closeModal" class="close-btn" aria-label="Close modal">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="leave-type-selector">
+                    <label class="leave-option">
+                        <input type="radio" name="leaveType" value="none" checked>
+                        <span class="option-label">
+                            <span class="option-icon">📝</span>
+                            <span class="option-text">Regular Note</span>
+                        </span>
+                    </label>
+                    <label class="leave-option" id="casualLeaveOption">
+                        <input type="radio" name="leaveType" value="casual">
+                        <span class="option-label">
+                            <span class="option-icon">🏖️</span>
+                            <span class="option-text">Casual Leave</span>
+                        </span>
+                    </label>
+                    <label class="leave-option">
+                        <input type="radio" name="leaveType" value="annual">
+                        <span class="option-label">
+                            <span class="option-icon">✈️</span>
+                            <span class="option-text">Annual Leave</span>
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Casual Leave Sub-Selector -->
+                <div id="casualSubSelector" class="casual-sub-selector hidden">
+                    <div class="sub-selector-title">Select Casual Leave Type:</div>
+                    <div class="sub-selector-options">
+                        <label class="sub-option">
+                            <input type="radio" name="casualType" value="full" checked>
+                            <span class="sub-option-label">
+                                <span class="sub-option-icon">🏖️</span>
+                                <span class="sub-option-text">Full Day</span>
+                            </span>
+                        </label>
+                        <label class="sub-option">
+                            <input type="radio" name="casualType" value="morning">
+                            <span class="sub-option-label">
+                                <span class="sub-option-icon">🌅</span>
+                                <span class="sub-option-text">Morning Half</span>
+                            </span>
+                        </label>
+                        <label class="sub-option">
+                            <input type="radio" name="casualType" value="evening">
+                            <span class="sub-option-label">
+                                <span class="sub-option-icon">🌆</span>
+                                <span class="sub-option-text">Evening Half</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                <label for="noteInput" class="note-label">Add a note (optional):</label>
+                <textarea id="noteInput" class="note-input" placeholder="Enter your note here..." rows="3"></textarea>
+                <div class="modal-actions">
+                    <button id="saveNote" class="btn btn-primary">Save</button>
+                    <button id="deleteNote" class="btn btn-secondary">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="holidays.js"></script>
+    <script src="script.js"></script>
+    <script src="side-panel.js"></script>
+</body>
+
+</html>
