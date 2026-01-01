@@ -468,6 +468,69 @@ function nextMonth() {
     renderCalendar();
 }
 
+// Export data to JSON file
+function exportData() {
+    const data = {
+        notes: notes,
+        leaves: leaves,
+        exportDate: new Date().toISOString(),
+        version: '1.0'
+    };
+
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `calendar-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert('Calendar data exported successfully!');
+}
+
+// Import data from JSON file
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // Validate data structure
+            if (!data.notes || !data.leaves) {
+                alert('Invalid backup file format!');
+                return;
+            }
+
+            // Confirm before overwriting
+            const confirm = window.confirm(
+                'This will replace all your current calendar data. Are you sure you want to continue?'
+            );
+
+            if (confirm) {
+                notes = data.notes;
+                leaves = data.leaves;
+                saveNotes();
+                renderCalendar();
+                alert('Calendar data imported successfully!');
+            }
+        } catch (error) {
+            alert('Error reading backup file. Please make sure it\'s a valid calendar backup.');
+            console.error('Import error:', error);
+        }
+    };
+
+    reader.readAsText(file);
+    // Reset file input
+    event.target.value = '';
+}
+
 // Initialize calendar
 function init() {
     loadNotes();
@@ -484,6 +547,13 @@ function init() {
     // Side panel event listeners
     document.getElementById('sidePanelToggle').addEventListener('click', toggleSidePanel);
     document.getElementById('closeSidePanel').addEventListener('click', closeSidePanel);
+
+    // Export/Import event listeners
+    document.getElementById('exportData').addEventListener('click', exportData);
+    document.getElementById('importData').addEventListener('click', () => {
+        document.getElementById('importFile').click();
+    });
+    document.getElementById('importFile').addEventListener('change', importData);
 
     // Close modal on outside click
     document.getElementById('noteModal').addEventListener('click', (e) => {
