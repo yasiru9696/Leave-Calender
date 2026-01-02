@@ -574,7 +574,8 @@ body::before {
     bottom: 0;
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(8px);
-    z-index: 1000;
+    z-index: 10000;
+    /* Higher than loading overlay (9999) */
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.3s ease;
