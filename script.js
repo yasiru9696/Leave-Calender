@@ -4,14 +4,89 @@ let currentYear = 2026;
 let notes = {};
 let leaves = {}; // Store leave information for each date
 let selectedDate = null;
-let currentUser = null;
+let syncCode = null;
 let unsubscribeFirestore = null;
 
 // Leave limits
 const CASUAL_LEAVE_TOTAL = 7;
 const ANNUAL_LEAVE_TOTAL = 14;
 
-// Initialize Firebase and authentication
+// Generate random sync code
+function generateSyncCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing characters
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+}
+
+// Validate sync code
+function validateSyncCode(code) {
+    if (!code || code.length < 6) {
+        return false;
+    }
+    // Only allow alphanumeric characters
+    return /^[A-Z0-9]+$/i.test(code);
+}
+
+// Get or setup sync code
+async function getSyncCode() {
+    // Check if sync code exists in localStorage
+    let code = localStorage.getItem('calendarSyncCode');
+
+    if (code && validateSyncCode(code)) {
+        return code.toUpperCase();
+    }
+
+    // Show sync code setup modal
+    return await showSyncCodeSetup();
+}
+
+// Show sync code setup modal
+function showSyncCodeSetup() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('syncCodeModal');
+        const generatedCodeEl = document.getElementById('generatedCode');
+        const syncCodeInput = document.getElementById('syncCodeInput');
+        const useSyncCodeBtn = document.getElementById('useSyncCode');
+        const useGeneratedCodeBtn = document.getElementById('useGeneratedCode');
+        const regenerateBtn = document.getElementById('regenerateCode');
+
+        // Generate initial code
+        let generated = generateSyncCode();
+        generatedCodeEl.textContent = generated;
+
+        // Regenerate code
+        regenerateBtn.onclick = () => {
+            generated = generateSyncCode();
+            generatedCodeEl.textContent = generated;
+        };
+
+        // Use custom code
+        useSyncCodeBtn.onclick = () => {
+            const customCode = syncCodeInput.value.trim().toUpperCase();
+            if (!validateSyncCode(customCode)) {
+                alert('Please enter a valid sync code (minimum 6 characters, letters and numbers only)');
+                return;
+            }
+            localStorage.setItem('calendarSyncCode', customCode);
+            modal.classList.remove('active');
+            resolve(customCode);
+        };
+
+        // Use generated code
+        useGeneratedCodeBtn.onclick = () => {
+            localStorage.setItem('calendarSyncCode', generated);
+            modal.classList.remove('active');
+            resolve(generated);
+        };
+
+        modal.classList.add('active');
+    });
+}
+
+// Initialize Firebase with sync code
 async function initFirebase() {
     const loadingOverlay = document.getElementById('loadingOverlay');
 
@@ -19,9 +94,9 @@ async function initFirebase() {
         // Wait for Firebase to be loaded
         await waitForFirebase();
 
-        // Sign in anonymously
-        const userCredential = await window.signInAnonymously(window.firebaseAuth);
-        currentUser = userCredential.user;
+        // Get sync code
+        syncCode = await getSyncCode();
+        console.log('Using sync code:', syncCode);
 
         // Migrate localStorage data to Firebase if exists
         await migrateLocalStorageToFirebase();
@@ -72,7 +147,7 @@ async function migrateLocalStorageToFirebase() {
         const localLeaves = savedLeaves ? JSON.parse(savedLeaves) : {};
 
         // Check if Firebase already has data
-        const docRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid, 'calendar', '2026');
+        const docRef = window.firestoreDoc(window.firebaseDb, 'calendars', syncCode);
 
         try {
             await window.firestoreSetDoc(docRef, {
@@ -94,9 +169,9 @@ async function migrateLocalStorageToFirebase() {
 
 // Set up Firestore real-time listener
 function setupFirestoreListener() {
-    if (!currentUser) return;
+    if (!syncCode) return;
 
-    const docRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid, 'calendar', '2026');
+    const docRef = window.firestoreDoc(window.firebaseDb, 'calendars', syncCode);
 
     unsubscribeFirestore = window.firestoreOnSnapshot(docRef, (doc) => {
         if (doc.exists()) {
@@ -135,7 +210,7 @@ function loadNotesFromLocalStorage() {
 
 // Save notes to Firestore
 async function saveNotes() {
-    if (!currentUser) {
+    if (!syncCode) {
         // Fallback to localStorage
         localStorage.setItem('calendarNotes2026', JSON.stringify(notes));
         localStorage.setItem('calendarLeaves2026', JSON.stringify(leaves));
@@ -151,7 +226,7 @@ async function saveNotes() {
     try {
         showSyncStatus('Syncing...', 'syncing');
 
-        const docRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid, 'calendar', '2026');
+        const docRef = window.firestoreDoc(window.firebaseDb, 'calendars', syncCode);
         await window.firestoreSetDoc(docRef, {
             notes: notes,
             leaves: leaves,
@@ -750,6 +825,33 @@ function init() {
                 casualSubSelector.classList.add('hidden');
             }
         });
+    });
+
+    // Sync settings event listeners
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+        const modal = document.getElementById('syncSettingsModal');
+        const currentCodeEl = document.getElementById('currentSyncCode');
+        currentCodeEl.textContent = syncCode || 'Not set';
+        modal.classList.add('active');
+    });
+
+    document.getElementById('closeSettings').addEventListener('click', () => {
+        document.getElementById('syncSettingsModal').classList.remove('active');
+    });
+
+    document.getElementById('copySyncCode').addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(syncCode);
+            showSyncStatus('Code copied!', 'synced');
+        } catch (err) {
+            alert('Failed to copy code: ' + err.message);
+        }
+    });
+
+    document.getElementById('changeSyncCode').addEventListener('click', () => {
+        document.getElementById('syncSettingsModal').classList.remove('active');
+        localStorage.removeItem('calendarSyncCode');
+        location.reload(); // Reload to show sync code setup
     });
 }
 

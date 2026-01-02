@@ -216,6 +216,96 @@
         </div>
     </div>
 
+    <!-- Sync Code Modal -->
+    <div id="syncCodeModal" class="modal">
+        <div class="modal-content sync-code-modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔄 Setup Sync</h2>
+            </div>
+            <div class="modal-body">
+                <p class="sync-code-description">
+                    To sync your calendar across devices, you need a sync code.
+                    Use the same code on all your devices to access your data.
+                </p>
+
+                <div class="sync-code-options">
+                    <div class="sync-code-section">
+                        <h3 class="sync-code-section-title">Enter Your Sync Code</h3>
+                        <input type="text" id="syncCodeInput" class="sync-code-input"
+                            placeholder="Enter sync code (min 6 characters)" maxlength="20">
+                        <button id="useSyncCode" class="btn btn-primary">Use This Code</button>
+                    </div>
+
+                    <div class="sync-code-divider">
+                        <span>OR</span>
+                    </div>
+
+                    <div class="sync-code-section">
+                        <h3 class="sync-code-section-title">Generate Random Code</h3>
+                        <div class="generated-code-display">
+                            <code id="generatedCode" class="generated-code"></code>
+                            <button id="regenerateCode" class="btn-icon" title="Generate new code">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                                </svg>
+                            </button>
+                        </div>
+                        <button id="useGeneratedCode" class="btn btn-primary">Use Generated Code</button>
+                    </div>
+                </div>
+
+                <div class="sync-code-warning">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>Keep your sync code private. Anyone with this code can access your calendar data.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Button -->
+    <button id="settingsBtn" class="settings-btn" title="Sync Settings">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6m0-18a9 9 0 0 1 9 9m-9-9a9 9 0 0 0-9 9m18 0a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9 9"></path>
+        </svg>
+    </button>
+
+    <!-- Sync Settings Modal -->
+    <div id="syncSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚙️ Sync Settings</h2>
+                <button class="close-btn" id="closeSettings">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="current-sync-code">
+                    <label class="note-label">Your Sync Code:</label>
+                    <div class="sync-code-display-box">
+                        <code id="currentSyncCode" class="current-code"></code>
+                        <button id="copySyncCode" class="btn-icon" title="Copy code">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <p class="sync-code-hint">Use this code on other devices to sync your calendar.</p>
+                </div>
+
+                <div class="sync-code-actions">
+                    <button id="changeSyncCode" class="btn btn-secondary">Change Sync Code</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
