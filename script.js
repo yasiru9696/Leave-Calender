@@ -4,13 +4,125 @@ let currentYear = 2026;
 let notes = {};
 let leaves = {}; // Store leave information for each date
 let selectedDate = null;
+let currentUser = null;
+let unsubscribeFirestore = null;
 
 // Leave limits
 const CASUAL_LEAVE_TOTAL = 7;
 const ANNUAL_LEAVE_TOTAL = 14;
 
-// Load notes and leaves from localStorage
-function loadNotes() {
+// Initialize Firebase and authentication
+async function initFirebase() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    try {
+        // Wait for Firebase to be loaded
+        await waitForFirebase();
+
+        // Sign in anonymously
+        const userCredential = await window.signInAnonymously(window.firebaseAuth);
+        currentUser = userCredential.user;
+
+        // Migrate localStorage data to Firebase if exists
+        await migrateLocalStorageToFirebase();
+
+        // Set up real-time listener
+        setupFirestoreListener();
+
+        // Hide loading overlay
+        setTimeout(() => {
+            loadingOverlay.classList.add('hidden');
+        }, 500);
+
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        // Fallback to localStorage
+        loadNotesFromLocalStorage();
+        loadingOverlay.classList.add('hidden');
+        showSyncStatus('Offline mode', 'offline');
+    }
+}
+
+// Wait for Firebase to be loaded
+function waitForFirebase() {
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 50;
+
+        const checkFirebase = setInterval(() => {
+            attempts++;
+            if (window.firebaseDb && window.firebaseAuth) {
+                clearInterval(checkFirebase);
+                resolve();
+            } else if (attempts >= maxAttempts) {
+                clearInterval(checkFirebase);
+                reject(new Error('Firebase failed to load'));
+            }
+        }, 100);
+    });
+}
+
+// Migrate localStorage data to Firebase
+async function migrateLocalStorageToFirebase() {
+    const savedNotes = localStorage.getItem('calendarNotes2026');
+    const savedLeaves = localStorage.getItem('calendarLeaves2026');
+
+    if (savedNotes || savedLeaves) {
+        const localNotes = savedNotes ? JSON.parse(savedNotes) : {};
+        const localLeaves = savedLeaves ? JSON.parse(savedLeaves) : {};
+
+        // Check if Firebase already has data
+        const docRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid, 'calendar', '2026');
+
+        try {
+            await window.firestoreSetDoc(docRef, {
+                notes: localNotes,
+                leaves: localLeaves,
+                lastUpdated: new Date().toISOString()
+            });
+
+            // Clear localStorage after successful migration
+            localStorage.removeItem('calendarNotes2026');
+            localStorage.removeItem('calendarLeaves2026');
+
+            console.log('Data migrated to Firebase');
+        } catch (error) {
+            console.error('Migration error:', error);
+        }
+    }
+}
+
+// Set up Firestore real-time listener
+function setupFirestoreListener() {
+    if (!currentUser) return;
+
+    const docRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid, 'calendar', '2026');
+
+    unsubscribeFirestore = window.firestoreOnSnapshot(docRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            notes = data.notes || {};
+            leaves = data.leaves || {};
+
+            updateLeaveCounters();
+            renderCalendar();
+
+            // Update side panel if it's open
+            const panel = document.getElementById('sidePanel');
+            if (panel && panel.classList.contains('active')) {
+                renderPlannedLeaves();
+            }
+
+            showSyncStatus('Synced', 'synced');
+        }
+    }, (error) => {
+        console.error('Firestore listener error:', error);
+        showSyncStatus('Sync error', 'error');
+    });
+}
+
+// Load notes from localStorage (fallback)
+function loadNotesFromLocalStorage() {
     const savedNotes = localStorage.getItem('calendarNotes2026');
     if (savedNotes) {
         notes = JSON.parse(savedNotes);
@@ -21,18 +133,69 @@ function loadNotes() {
     }
 }
 
-// Save notes and leaves to localStorage
-function saveNotes() {
-    localStorage.setItem('calendarNotes2026', JSON.stringify(notes));
-    localStorage.setItem('calendarLeaves2026', JSON.stringify(leaves));
-    updateLeaveCounters();
+// Save notes to Firestore
+async function saveNotes() {
+    if (!currentUser) {
+        // Fallback to localStorage
+        localStorage.setItem('calendarNotes2026', JSON.stringify(notes));
+        localStorage.setItem('calendarLeaves2026', JSON.stringify(leaves));
+        updateLeaveCounters();
 
-    // Update side panel if it's open
-    const panel = document.getElementById('sidePanel');
-    if (panel && panel.classList.contains('active')) {
-        renderPlannedLeaves();
+        const panel = document.getElementById('sidePanel');
+        if (panel && panel.classList.contains('active')) {
+            renderPlannedLeaves();
+        }
+        return;
+    }
+
+    try {
+        showSyncStatus('Syncing...', 'syncing');
+
+        const docRef = window.firestoreDoc(window.firebaseDb, 'users', currentUser.uid, 'calendar', '2026');
+        await window.firestoreSetDoc(docRef, {
+            notes: notes,
+            leaves: leaves,
+            lastUpdated: new Date().toISOString()
+        });
+
+        // Note: updateLeaveCounters and renderPlannedLeaves will be called by the listener
+
+    } catch (error) {
+        console.error('Save error:', error);
+        showSyncStatus('Save failed', 'error');
+
+        // Fallback to localStorage
+        localStorage.setItem('calendarNotes2026', JSON.stringify(notes));
+        localStorage.setItem('calendarLeaves2026', JSON.stringify(leaves));
+        updateLeaveCounters();
     }
 }
+
+// Show sync status
+function showSyncStatus(message, type) {
+    let statusEl = document.getElementById('syncStatus');
+
+    if (!statusEl) {
+        statusEl = document.createElement('div');
+        statusEl.id = 'syncStatus';
+        statusEl.className = 'sync-status';
+        statusEl.innerHTML = '<div class="sync-dot"></div><span class="sync-message"></span>';
+        document.body.appendChild(statusEl);
+    }
+
+    const messageEl = statusEl.querySelector('.sync-message');
+    messageEl.textContent = message;
+
+    statusEl.className = 'sync-status show ' + type;
+
+    // Auto-hide after 3 seconds for success messages
+    if (type === 'synced') {
+        setTimeout(() => {
+            statusEl.classList.remove('show');
+        }, 3000);
+    }
+}
+
 
 // Get note for a specific date
 function getNote(dateString) {
@@ -533,7 +696,8 @@ function importData(event) {
 
 // Initialize calendar
 function init() {
-    loadNotes();
+    // Initialize Firebase and load data
+    initFirebase();
     updateLeaveCounters();
     renderCalendar();
 
